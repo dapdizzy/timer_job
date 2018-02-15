@@ -55,12 +55,17 @@ defmodule TimerJob do
     {:noreply, state}
   end
 
-  def handle_cast(:run, %TimerJob{interval: interval, period: period} = state) do
-    new_timer_ref =
-      if interval |> is_integer and interval > 0 do
-        self |> Process.send_after(:activate, interval)
-      end
-    {:noreply, %{state | is_running: true, timer_ref: new_timer_ref, remaining_period: period}}
+  def handle_cast(:run, %TimerJob{period: period} = state) do
+    # Activate the Job right off for the first time it's been activated (ran).
+    # timer_ref will be assigned later in the activate callback handler.
+    # new_timer_ref =
+    #   if interval |> is_integer and interval > 0 do
+    #     self |> Process.send_after(:activate, interval)
+    #   end
+
+    # Send the signal right away. It will be handled next to this callback (which will look 'immediately').
+    self() |> send(:activate)
+    {:noreply, %{state | is_running: true, remaining_period: period}}
   end
 
   def handle_cast(:stop, state) do
@@ -90,7 +95,7 @@ defmodule TimerJob do
     spawn_on_call: spawn_on_call
     } = state) do
     new_timer_ref =
-      case timer_ref |> Process.read_timer do
+      case timer_ref |> read_timer do
         false ->
           if spawn_on_call do
             spawn module, function, args
@@ -110,4 +115,8 @@ defmodule TimerJob do
     # end
     # {:noreply, %{state | period: (if period == :infinity, do: :infinity, else: period - interval)}}
   end
+
+  # Helpers
+  defp read_timer(nil), do: false
+  defp read_timer(timer_ref), do: timer_ref |> Process.read_timer
 end

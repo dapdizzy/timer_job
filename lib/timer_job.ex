@@ -4,16 +4,19 @@ defmodule TimerJob do
   defstruct [:module, :function, :args, :interval, :period, :is_running, :remaining_period, :is_active, :timer_ref, :spawn_on_call]
 
   # API
-  def start_link(module, function, args, interval, period \\ :infinity, spawn_on_call \\ false, gen_server_options \\ []) do
+  def start_link(module, function, args, interval, period \\ :infinity, spawn_on_call \\ false, gen_server_options \\ [], auto_run \\ false) do
     TimerJob |> GenServer.start_link(
-      %TimerJob
       {
-        module: module,
-        function: function,
-        args: args,
-        interval: interval,
-        period: period,
-        spawn_on_call: spawn_on_call
+        %TimerJob
+        {
+          module: module,
+          function: function,
+          args: args,
+          interval: interval,
+          period: period,
+          spawn_on_call: spawn_on_call
+        },
+        auto_run
       },
       gen_server_options)
   end
@@ -39,8 +42,11 @@ defmodule TimerJob do
   end
 
   # Callbacks
-  def init() do
-
+  def init({state, auto_run}) do
+    if auto_run do
+      self() |> run()
+    end
+    {:ok, state}
   end
 
   def handle_call(:state, _from, state) do

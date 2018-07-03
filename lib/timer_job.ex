@@ -4,6 +4,23 @@ defmodule TimerJob do
   defstruct [:module, :function, :args, :interval, :period, :is_running, :remaining_period, :is_active, :timer_ref, :spawn_on_call]
 
   # API
+  def start(module, function, args, interval, period \\ :infinity, spawn_on_call \\ false, gen_server_options \\ [], auto_run \\ false) do
+    TimerJob |> GenServer.start(
+      {
+        %TimerJob
+        {
+          module: module,
+          function: function,
+          args: args,
+          interval: interval,
+          period: period,
+          spawn_on_call: spawn_on_call
+        },
+        auto_run
+      },
+      gen_server_options)
+  end
+
   def start_link(module, function, args, interval, period \\ :infinity, spawn_on_call \\ false, gen_server_options \\ [], auto_run \\ false) do
     TimerJob |> GenServer.start_link(
       {
